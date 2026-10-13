@@ -1,0 +1,59 @@
+# An rhv tag builds the RHEL 10 package in the EL10 image and publishes it.
+# Upstream's release.yml (v* tags) stays; this fork never tags v*.
+name: Release RHEL
+on:
+  push:
+    tags: ['rhv*']
+permissions:
+  contents: write
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      # rhv<version>-<seq>: the version must be the one CMakeLists.txt carries.
+      - run: |
+          name=${GITHUB_REF_NAME#rhv}
+          v=${name%-*}
+          seq=${name##*-}
+          [ "$name" != "$GITHUB_REF_NAME" ] || { echo "tag must start with rhv: $GITHUB_REF_NAME"; exit 1; }
+          [ "$v" != "$name" ] && [ -n "$v" ] && [ -n "$seq" ] || { echo "tag must be rhv<version>-<seq>: $GITHUB_REF_NAME"; exit 1; }
+          case "$seq" in *[!0-9]*) echo "the sequence must be a number: $GITHUB_REF_NAME"; exit 1 ;; esac
+          grep -qF "project(omaphoto VERSION $v " CMakeLists.txt || { echo "CMakeLists.txt is not $v"; exit 1; }
+  rpm:
+    needs: version
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      # The EL10 image: its toolchain and dependencies, ONNX Runtime, the model.
+      - run: docker build -t omaphoto-rhel scripts/distro/rhel
+      # D4's path: the upstream rpm job's parameters on the EL10 image.
+      - run: |
+          docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/src" -w /src omaphoto-rhel sh -c '
+            cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
+              -DOMAPHOTO_BUNDLE_ORT=ON -DOMAPHOTO_MODEL=/usr/local/share/omaphoto/u2net.onnx &&
+            cmake --build build --target omaphoto && cd build && cpack -G RPM'
+      # RPM-DEFAULT names the package release (1), not the platform; the install
+      # script fetches a fixed name, so the workflow renames to the asset's.
+      - run: mv build/omaphoto-*.x86_64.rpm omaphoto-el10.x86_64.rpm
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rpm-el10
+          path: omaphoto-el10.x86_64.rpm
+  publish:
+    needs: rpm
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          merge-multiple: true
+          path: packages
+      # The same fixed name the install script greps SHA256SUMS for.
+      - working-directory: packages
+        run: sha256sum omaphoto-el10.x86_64.rpm > SHA256SUMS
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" packages/* --title "OmaPhoto ${GITHUB_REF_NAME#rhv}" \
+            --notes "RHEL 10 package. Verify with SHA256SUMS and install with scripts/install/rhel.sh."
