@@ -66,6 +66,8 @@ EL 系仓库自带的 libheif 不含 HEVC 解码器（专利限制），因此�
 sudo dnf install libheif-freeworld
 ```
 
+已知包装缺陷：受构建工具链问题（CPack 对 rpm 弱依赖标签的探测误判）影响，安装包暂未携带 `libheif-freeworld` 的弱依赖（Suggests）标记。这不影响安装与任何功能使用；一键安装脚本会独立给出 HEIC 提示。
+
 ## 从源码构建
 
 以下依赖在 Rocky Linux 10 上实测。先启用 EPEL 与 CRB 仓库：
