@@ -20,6 +20,10 @@ else
     docker build -t "omaphoto-$distro" "$here/distro/$distro"
 fi
 steps="cmake -S . -B /tmp/build -G Ninja -DOMAPHOTO_WERROR=ON && cmake --build /tmp/build && ctest --test-dir /tmp/build --output-on-failure --timeout 120"
+# EL10 gcc contracts FMA by default; match the package.
+if [ "$distro" = rhel10 ]; then
+    steps="cmake -S . -B /tmp/build -G Ninja -DOMAPHOTO_WERROR=ON -DCMAKE_C_FLAGS=-ffp-contract=off -DCMAKE_CXX_FLAGS=-ffp-contract=off && cmake --build /tmp/build && ctest --test-dir /tmp/build --output-on-failure --timeout 120"
+fi
 # Not root, as dev.sh: tests refuse what root may do.
 user=1000:1000
 # Nix writes its store as root; the tests drop it.
