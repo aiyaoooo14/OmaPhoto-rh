@@ -28,9 +28,11 @@ jobs:
       # The EL10 image: its toolchain and dependencies, ONNX Runtime, the model.
       - run: docker build -t omaphoto-rhel scripts/distro/rhel
       # D4's path: the upstream rpm job's parameters on the EL10 image.
+      # EL10 targets x86-64-v3, whose gcc contracts FMA; -ffp-contract=off keeps Swift's floats (S2).
       - run: |
           docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/src" -w /src omaphoto-rhel sh -c '
             cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
+              -DCMAKE_C_FLAGS=-ffp-contract=off -DCMAKE_CXX_FLAGS=-ffp-contract=off \
               -DOMAPHOTO_BUNDLE_ORT=ON -DOMAPHOTO_MODEL=/usr/local/share/omaphoto/u2net.onnx &&
             cmake --build build --target omaphoto && cd build && cpack -G RPM'
       # RPM-DEFAULT names the package release (1), not the platform; the install
