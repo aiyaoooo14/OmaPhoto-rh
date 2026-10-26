@@ -1,10 +1,7 @@
-# A supported EL, 10 only: Rocky 10.2 carries dnf5.
+# A supported Rocky, 10 unless named; EPEL, RPM Fusion, and CRB.
 ARG RELEASE=10
-FROM rockylinux:10.2
-ARG RELEASE
-# EL9 waits for its own image; refuse the rest.
-RUN test "$RELEASE" = 10
-# EPEL and RPM Fusion first, then the CRB build set.
+# el10 builds on the system GCC 14.
+FROM rockylinux:10.2 AS el10
 RUN dnf -y install epel-release curl \
     && dnf -y install https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-10.noarch.rpm \
     && dnf -y --enablerepo=crb install gcc-c++ cmake ninja-build pkgconf \
@@ -13,6 +10,13 @@ RUN dnf -y install epel-release curl \
         shared-mime-info hicolor-icon-theme dejavu-sans-fonts \
         dejavu-serif-fonts dejavu-sans-mono-fonts rpm-build \
     && dnf clean all
+# el9: the GCC 14 toolset, put on PATH through ENV.
+FROM rockylinux:9 AS el9
+RUN dnf install -y --enablerepo=crb epel-release curl \
+    && dnf install -y --enablerepo=crb cmake ninja-build gcc-c++ gcc-toolset-14 gcc-toolset-14-gcc-c++ \
+        qt6-qtbase-devel qt6-qtsvg-devel qt6-qtimageformats libheif-devel LibRaw-devel fontconfig-devel rpm-build \
+    && dnf clean all
+FROM el${RELEASE}
 # The ONNX Runtime the packages carry: Microsoft's own build.
 RUN curl -fsSL -o /tmp/ort.tgz \
         https://github.com/microsoft/onnxruntime/releases/download/v1.21.0/onnxruntime-linux-x64-1.21.0.tgz \
@@ -26,7 +30,7 @@ RUN curl -fsSL -o /tmp/ort.tgz \
     && cp /tmp/ort/LICENSE /tmp/ort/ThirdPartyNotices.txt /usr/local/share/doc/onnxruntime/ \
     && echo /usr/local/lib64 > /etc/ld.so.conf.d/onnxruntime.conf && ldconfig \
     && rm -rf /tmp/ort /tmp/ort.tgz
-# U²-Net for Remove Background, pinned by its checksum.
+# U²-Net (Apache-2.0), as rembg converted it (MIT), for Remove Background.
 RUN mkdir -p /usr/local/share/omaphoto \
     && curl -fsSL -o /usr/local/share/omaphoto/u2net.onnx \
         https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx \

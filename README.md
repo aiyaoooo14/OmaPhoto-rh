@@ -37,17 +37,15 @@ AI 代理和脚本可以直接构建与编辑项目：一个 `.comp` 项目就�
 
 ## 安装
 
-支持的系统：RHEL、Rocky Linux、AlmaLinux 或 CentOS Stream 10，架构 x86_64。安装包内已捆绑 ONNX Runtime 与 Remove Background 所需的模型（因此下载体积约 200 MB），装完无需任何额外配置。
+支持的系统：RHEL、Rocky Linux、AlmaLinux 或 CentOS Stream 的 EL9 与 EL10，架构 x86_64。安装包内已捆绑 ONNX Runtime 与 Remove Background 所需的模型（因此下载体积约 200 MB），装完无需任何额外配置。
 
-一键安装（下载脚本并运行；脚本会确认系统与架构，从本仓库 Releases 下载最新的 RPM，核对 SHA-256 后用 dnf 安装）：
+一键安装（下载脚本并运行；脚本会确认系统与架构，按主版本选择对应的 RPM，从本仓库 Releases 下载最新的包，核对 SHA-256 后用 dnf 安装）：
 
 ```sh
 curl -fsSLO https://raw.githubusercontent.com/aiyaoooo14/OmaPhoto-rh/main/scripts/install/rhel.sh && bash rhel.sh
 ```
 
-EL9（RHEL / Rocky / Alma 9）暂未适配：脚本会明确提示，不会静默装出不匹配的包。
-
-也可以手动下载安装：
+也可以手动下载安装（EL9 系统把包名中的 `el10` 换成 `el9`）：
 
 ```sh
 curl -fsSLO https://github.com/aiyaoooo14/OmaPhoto-rh/releases/latest/download/omaphoto-el10.x86_64.rpm
@@ -56,7 +54,7 @@ sha256sum -c --ignore-missing SHA256SUMS
 sudo dnf install ./omaphoto-el10.x86_64.rpm
 ```
 
-`releases/latest/download/…` 始终指向最新一次发布。安装包按 RHEL 10 的 x86-64-v3 基线编译，不含 AVX2 指令集的较老 CPU 无法运行。
+`releases/latest/download/…` 始终指向最新一次发布。两个包按各自发行版的基线编译：EL10 为 x86-64-v3，不含 AVX2 指令集的较老 CPU 无法运行；EL9 为 x86-64-v2。
 
 ### 可选：启用 HEIC 导入
 
