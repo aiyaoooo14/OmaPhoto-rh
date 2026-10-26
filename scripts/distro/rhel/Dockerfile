@@ -1,7 +1,8 @@
 # A supported Rocky, 10 unless named; EPEL, RPM Fusion, and CRB.
 ARG RELEASE=10
-# el10 builds on the system GCC 14.
-FROM rockylinux:10.2 AS el10
+# el10 builds on the system GCC 14. Docker Hub's rockylinux stops at 9.3;
+# Rocky publishes 10 itself on quay.io.
+FROM quay.io/rockylinux/rockylinux:10.2 AS el10
 RUN dnf -y install epel-release curl \
     && dnf -y install https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-10.noarch.rpm \
     && dnf -y --enablerepo=crb install gcc-c++ cmake ninja-build pkgconf \
